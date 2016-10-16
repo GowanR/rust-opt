@@ -4,7 +4,6 @@ extern crate rand;
 
 use benchmark::Func;
 use self::rand::Rng;
-use self::rand::ThreadRng;
 use util::bounded;
 
 #[derive(Clone)]
@@ -21,8 +20,12 @@ impl<T: Func> Gene<T> {
     pub fn new( d: i32, problem: T ) -> Gene<T> {
         let mut seq = Vec::new();
         let mut rnd = rand::thread_rng();
-
-        for _ in 0..d {
+        let dim = if problem.d().is_positive() {
+            problem.d()
+        } else {
+            d
+        };
+        for _ in 0..dim {
             seq.push( bounded( rnd.gen(), -10_f32, 10_f32 ) );
         }
         Gene {
@@ -58,7 +61,7 @@ impl<T: Func + Clone> Population<T> {
     }
     pub fn iterate( &mut self ) {
         self.individuals.sort_by(| a, b | a.fitness().partial_cmp( &b.fitness()).unwrap());
-        let mut best = self.individuals.clone();
+        let best = self.individuals.clone();
         let ( best, _ ) = best.split_at( self.individuals.len()/2 );
         {
             let mut ind = &mut self.individuals;

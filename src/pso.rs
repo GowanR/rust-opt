@@ -70,8 +70,13 @@ impl<T: Func> Swarm<T> {
     pub fn new(d: i32, l: f32, u: f32, n: i32, function: T ) -> Swarm<T> {
         let mut rnd = rand::thread_rng();
         let mut parts = Vec::new();
+        let dim = if function.d().is_positive() {
+            function.d()
+        } else {
+            d
+        };
         for _ in 0..n {
-            parts.push(Particle::new(d, l, u, &mut rnd));
+            parts.push(Particle::new(dim, l, u, &mut rnd));
         }
         Swarm {
             best: parts[0].pos.clone(),

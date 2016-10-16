@@ -5,21 +5,41 @@ use benchmark::Func;
 use self::rand::Rng;
 use self::rand::ThreadRng;
 use util::bounded;
+use util::u;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Particle {
     vel: Vec<f32>,
     pos: Vec<f32>,
     best: Vec<f32>,
     dna: Gene,
+    new_best: f32,
+    old_best: f32,
+    min_integral: f32,
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Gene {
     current: f32,
     global: f32,
     local: f32,
 }
-
+impl Gene {
+    fn mutate( g: Particle ) -> Particle {
+        Particle {
+            vel: g.vel,
+            pos: g.pos,
+            best: g.best,
+            dna: Gene {
+                current: g.dna.current + u(),
+                global: g.dna.global + u(),
+                local: g.dna.local + u(),
+            },
+            new_best: g.new_best,
+            old_best: g.old_best,
+            min_integral: g.min_integral,
+        }
+    }
+}
 pub struct Swarm<T: Func> {
     particles: Vec<Particle>,
     best: Vec<f32>,
@@ -47,6 +67,9 @@ impl Particle {
             vel: v,
             pos: p.clone(),
             best: p.clone(),
+            new_best: 0_f32,
+            old_best: 0_f32,
+            min_integral: 0_f32,
             dna: Gene {
                 current: bounded( rnd.gen(), 0_f32, 4_f32 ),
                 global:  bounded( rnd.gen(), 0_f32, 4_f32 ),
@@ -82,8 +105,13 @@ impl<T: Func> Swarm<T> {
     pub fn new(d: i32, l: f32, u: f32, n: i32, function: T ) -> Swarm<T> {
         let mut rnd = rand::thread_rng();
         let mut parts = Vec::new();
+        let dim = if function.d().is_positive() {
+            function.d()
+        } else {
+            d
+        };
         for _ in 0..n {
-            parts.push(Particle::new(d, l, u, &mut rnd));
+            parts.push(Particle::new(dim, l, u, &mut rnd));
         }
         Swarm {
             best: parts[0].pos.clone(),
@@ -100,9 +128,25 @@ impl<T: Func> Swarm<T> {
             }
             if self.function.func(&part.pos) < self.function.func(&part.best) {
                 part.best = part.pos.clone();
+                part.new_best = self.function.func(&part.pos);
+                part.min_integral += part.new_best - part.old_best;
             }
+            part.old_best = part.new_best.clone();
             if self.function.func(&part.best) < self.function.func(&self.best) {
                 self.best = part.best.clone();
+            }
+        }
+        // Genetic computations.
+        self.particles.sort_by(| a, b | a.min_integral.partial_cmp( &b.min_integral ).unwrap());
+        let best = self.particles.clone();
+        let ( best, _ ) = best.split_at( self.particles.len()/2 );
+        {
+            let mut ind = &mut self.particles;
+            for i in 0..ind.len() {
+                if i % 2 == 0 {
+                    ind[i]     = Gene::mutate( best[i/2].clone() );
+                    ind[i + 1] = Gene::mutate( best[i/2].clone() );
+                }
             }
         }
     }
