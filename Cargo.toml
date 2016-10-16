@@ -1,0 +1,12 @@
+[package]
+name = "rust_opt"
+version = "0.1.0"
+authors = ["Gowan Rowland <gowan.rowland@gmail.com>"]
+
+[dependencies]
+rand = "0.3"
+
+[[bin]]
+doc = false
+name = "rust_opt"
+path = "src/main.rs"
