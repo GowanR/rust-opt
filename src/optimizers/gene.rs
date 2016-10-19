@@ -36,6 +36,17 @@ impl<T: Func> Gene<T> {
     fn fitness( &self ) -> f32 {
         self.problem.func( &self.sequence )
     }
+    fn mutate_compare( best: Gene<T>, worst: Gene<T> ) -> Gene<T> {
+        let mut seq = Vec::new();
+        for i in 0..best.sequence.len() {
+            //let x = (/*best.sequence[i]*/ 1_f32 - worst.sequence[i] );
+            seq.push( /*bounded( rand::random::<f32>(), -0.5_f32, 0.5_f32 ) +*/ best.sequence[i]+best.sequence[i] );
+        }
+        Gene {
+            sequence: seq,
+            problem: best.problem,
+        }
+    }
     fn mutate( individual: Gene<T> ) -> Gene<T> {
         let mut rnd = rand::thread_rng();
         let mut seq = Vec::new();
@@ -72,6 +83,32 @@ impl<T: Func + Clone> Population<T> {
                 }
             }
         }
+    }
+    pub fn comp_iterate( &mut self ) {
+        self.individuals.sort_by(| a, b | a.fitness().partial_cmp( &b.fitness()).unwrap());
+        let best = self.individuals.clone();
+        let worst = self.individuals.clone();
+        let ( best, worst ) = best.split_at( self.individuals.len()/2 );
+        {
+            let mut ind = &mut self.individuals;
+            for i in 0..ind.len() {
+                if i % 2 == 0 {
+                    // ind[i]     = Gene::mutate( best[i/2].clone() );
+                    // ind[i + 1] = Gene::mutate( best[i/2].clone() );
+                    ind[i]     = Gene::mutate_compare( best[i/2].clone(), worst[i/2].clone() );
+                    ind[i + 1] = Gene::mutate_compare( best[i/2].clone(), worst[i/2].clone() );
+                }
+            }
+        }
+    }
+    pub fn comp_opt( &mut self, n: i64 ) -> Vec<f32> {
+        println!( "comp_opt() => ()" );
+        for i in 0..n {
+            //println!("itter {}", i );
+            self.comp_iterate();
+        }
+        self.individuals.sort_by(|a, b| a.fitness().partial_cmp( &b.fitness()).unwrap());
+        self.individuals[0].sequence.clone()
     }
     pub fn opt( &mut self, n: i64 ) -> Vec<f32> {
         for _ in 0..n {

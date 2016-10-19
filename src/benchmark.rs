@@ -38,6 +38,9 @@ pub struct McCormick;
 #[derive(Copy, Clone)]
 pub struct Ackley;
 
+#[derive(Copy, Clone)]
+pub struct DropWave;
+
 impl Func for Rastrigin {
     fn func(&self, x: &Vec<f32>) -> f32 {
         use std::f64::consts::PI;
@@ -106,4 +109,15 @@ impl Func for Ackley {
     fn d( &self ) -> i32 { -1 }
     fn minarg( &self ) -> Vec<f32> { vec! [0_f32] }
     fn min( &self ) -> f32 { 0_f32 }
+}
+
+impl Func for DropWave {
+    fn func( &self, x: &Vec<f32>) -> f32 {
+        -1_f32 * ((1_f32 + (12_f32*(x[0].powi(2)+x[1].powi(2)).sqrt()).cos())
+        /
+        (0.5_f32*(x[0].powi(2)+x[1].powi(2))+2_f32))
+    }
+    fn d( &self ) -> i32 { 2 }
+    fn minarg( &self ) -> Vec<f32> { vec! [0_f32, 0_f32] }
+    fn min( &self ) -> f32 { -1_f32 }
 }

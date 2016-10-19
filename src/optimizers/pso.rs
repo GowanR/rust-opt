@@ -1,3 +1,4 @@
+//! Particle Swarm Optimization (PSO) in its simplest form.
 
 extern crate rand;
 
@@ -5,44 +6,16 @@ use benchmark::Func;
 use self::rand::Rng;
 use self::rand::ThreadRng;
 use util::bounded;
-use util::u;
-
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct Particle {
     vel: Vec<f32>,
     pos: Vec<f32>,
     best: Vec<f32>,
-    dna: Gene,
-    new_best: f32,
-    old_best: f32,
-    min_integral: f32,
 }
-#[derive(Debug, Clone)]
-struct Gene {
-    current: f32,
-    global: f32,
-    local: f32,
-}
-impl Gene {
-    fn mutate( g: Particle ) -> Particle {
-        Particle {
-            vel: g.vel,
-            pos: g.pos,
-            best: g.best,
-            dna: Gene {
-                current: g.dna.current + u(),
-                global: g.dna.global + u(),
-                local: g.dna.local + u(),
-            },
-            new_best: g.new_best,
-            old_best: g.old_best,
-            min_integral: g.min_integral,
-        }
-    }
-}
+
 pub struct Swarm<T: Func> {
     particles: Vec<Particle>,
-    best: Vec<f32>,
+    pub best: Vec<f32>,
     function: T,
     random: ThreadRng,
 }
@@ -67,20 +40,12 @@ impl Particle {
             vel: v,
             pos: p.clone(),
             best: p.clone(),
-            new_best: 0_f32,
-            old_best: 0_f32,
-            min_integral: 0_f32,
-            dna: Gene {
-                current: bounded( rnd.gen(), 0_f32, 4_f32 ),
-                global:  bounded( rnd.gen(), 0_f32, 4_f32 ),
-                local:   bounded( rnd.gen(), 0_f32, 4_f32 ),
-            }
         }
     }
     fn update_velocity(&mut self, parent_best: &Vec<f32>, parent_rnd: &mut ThreadRng ) {
-        let w = self.dna.current;
-        let g = self.dna.global;
-        let p = self.dna.local;
+        let w = 1f32;
+        let g = 1f32;
+        let p = 1f32;
         let g_rand: f32 = parent_rnd.gen();
         let p_rand: f32 = parent_rnd.gen();
         for i in 0..self.vel.len() {
@@ -120,32 +85,16 @@ impl<T: Func> Swarm<T> {
             random: rnd,
         }
     }
-    fn iterate(&mut self) {
+    pub fn iterate(&mut self) {
         for part in &mut self.particles {
             part.update_velocity( &self.best, &mut self.random );
             for i in 0..part.pos.len() {
                 part.pos[i] += part.vel[i];
             }
-            if self.function.func(&part.pos) < self.function.func(&part.best) {
+            if (self.function.func(&part.pos) - self.function.func(&part.best)) < 0. {
                 part.best = part.pos.clone();
-                part.new_best = self.function.func(&part.pos);
-                part.min_integral += part.new_best - part.old_best;
-            }
-            part.old_best = part.new_best.clone();
-            if self.function.func(&part.best) < self.function.func(&self.best) {
-                self.best = part.best.clone();
-            }
-        }
-        // Genetic computations.
-        self.particles.sort_by(| a, b | a.min_integral.partial_cmp( &b.min_integral ).unwrap());
-        let best = self.particles.clone();
-        let ( best, _ ) = best.split_at( self.particles.len()/2 );
-        {
-            let mut ind = &mut self.particles;
-            for i in 0..ind.len() {
-                if i % 2 == 0 {
-                    ind[i]     = Gene::mutate( best[i/2].clone() );
-                    ind[i + 1] = Gene::mutate( best[i/2].clone() );
+                if (self.function.func(&part.best) - self.function.func(&self.best)) < 0. {
+                    self.best = part.best.clone();
                 }
             }
         }
