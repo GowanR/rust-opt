@@ -36,22 +36,24 @@ impl<T: Func> Gene<T> {
     fn fitness( &self ) -> f32 {
         self.problem.func( &self.sequence )
     }
-    fn mutate_compare( best: Gene<T>, worst: Gene<T> ) -> Gene<T> {
+    fn crossover( a: Gene<T>, b: Gene<T> ) -> Gene<T> {
         let mut seq = Vec::new();
-        for i in 0..best.sequence.len() {
-            //let x = (/*best.sequence[i]*/ 1_f32 - worst.sequence[i] );
-            seq.push( /*bounded( rand::random::<f32>(), -0.5_f32, 0.5_f32 ) +*/ best.sequence[i]+best.sequence[i] );
+        for i in 0..a.sequence.len() {
+            if rand::random::<f32>() < 0.5_f32 {
+                seq.push( a.sequence[i] );
+            } else {
+                seq.push( b.sequence[i] );
+            }
         }
         Gene {
             sequence: seq,
-            problem: best.problem,
+            problem: a.problem,
         }
     }
     fn mutate( individual: Gene<T> ) -> Gene<T> {
-        let mut rnd = rand::thread_rng();
         let mut seq = Vec::new();
         for i in 0..individual.sequence.len() {
-            seq.push( individual.sequence[i] + bounded( rnd.gen(), -1_f32, 1_f32 ) );
+            seq.push( individual.sequence[i] + bounded( rand::random::<f32>(), -0.5_f32, 0.5_f32 ) );
         }
         Gene {
             sequence: seq,
@@ -87,24 +89,22 @@ impl<T: Func + Clone> Population<T> {
     pub fn comp_iterate( &mut self ) {
         self.individuals.sort_by(| a, b | a.fitness().partial_cmp( &b.fitness()).unwrap());
         let best = self.individuals.clone();
-        let worst = self.individuals.clone();
-        let ( best, worst ) = best.split_at( self.individuals.len()/2 );
+        let ( best, _ ) = best.split_at( self.individuals.len()/2 );
         {
             let mut ind = &mut self.individuals;
+            use self::rand::distributions::{IndependentSample, Range};
+            let between = Range::new(0, 10);
+            let mut rng = rand::thread_rng();
             for i in 0..ind.len() {
                 if i % 2 == 0 {
-                    // ind[i]     = Gene::mutate( best[i/2].clone() );
-                    // ind[i + 1] = Gene::mutate( best[i/2].clone() );
-                    ind[i]     = Gene::mutate_compare( best[i/2].clone(), worst[i/2].clone() );
-                    ind[i + 1] = Gene::mutate_compare( best[i/2].clone(), worst[i/2].clone() );
+                    ind[i]     = Gene::mutate( Gene::crossover( best[i/2].clone(), best[between.ind_sample(&mut rng)].clone() ) );
+                    ind[i + 1] = Gene::mutate( Gene::crossover( best[i/2].clone(), best[between.ind_sample(&mut rng)].clone() ) );
                 }
             }
         }
     }
     pub fn comp_opt( &mut self, n: i64 ) -> Vec<f32> {
-        println!( "comp_opt() => ()" );
-        for i in 0..n {
-            //println!("itter {}", i );
+        for _ in 0..n {
             self.comp_iterate();
         }
         self.individuals.sort_by(|a, b| a.fitness().partial_cmp( &b.fitness()).unwrap());

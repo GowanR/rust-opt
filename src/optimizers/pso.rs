@@ -44,8 +44,8 @@ impl Particle {
     }
     fn update_velocity(&mut self, parent_best: &Vec<f32>, parent_rnd: &mut ThreadRng ) {
         let w = 1f32;
-        let g = 1f32;
-        let p = 1f32;
+        let g = 1.25_f32;
+        let p = 1.5_f32;
         let g_rand: f32 = parent_rnd.gen();
         let p_rand: f32 = parent_rnd.gen();
         for i in 0..self.vel.len() {

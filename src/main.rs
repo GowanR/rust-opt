@@ -1,12 +1,13 @@
 extern crate rust_opt;
-extern crate redis;
-use redis::Commands;
+extern crate rand;
+//extern crate redis;
+//use redis::Commands;
 
 use rust_opt::benchmark::Func;
-use std::io::prelude::*;
-use std::fs::File;
+//use std::io::prelude::*;
+//use std::fs::File;
 use rust_opt::optimizers::gene::Population;
-use rust_opt::optimizers::gd::GD;
+//use rust_opt::optimizers::gd::GD;
 
 use rust_opt::benchmark;
 fn print_stats<T: Func>( foundarg: Vec<f32>, problem: T ) {
@@ -48,7 +49,7 @@ fn print_stats<T: Func>( foundarg: Vec<f32>, problem: T ) {
 
 fn main() {
 
-    let problem = benchmark::DropWave.clone();
+    let problem = benchmark::Rosenbrock.clone();
     let mut solution = Vec::new();
     {
         let mut pop = Population::new( 1000, 100, problem );
@@ -57,6 +58,7 @@ fn main() {
         println!( "Evolution" );
         print_stats( solution, problem );
     }
+    println!("");
     {
         let mut pop = Population::new( 1000, 100, problem );
         solution = pop.comp_opt( 1000 );
@@ -83,5 +85,14 @@ fn main() {
         print_stats( solution, problem );
     }
     println!("");
-    println!("f({:?}) = {}", problem.minarg(), problem.func( &problem.minarg() ) )
+    {
+        use rust_opt::optimizers::bayes_pso::Swarm;
+        let mut s = Swarm::new( 100, -10f32, 10f32, 1000, problem);
+        solution = s.opt(1000);
+
+        println!( "Bayes Genetic PSO" );
+        print_stats( solution, problem );
+    }
+    println!("");
+    println!("f({:?}) = {}", problem.minarg(), problem.func( &problem.minarg() ) );
 }

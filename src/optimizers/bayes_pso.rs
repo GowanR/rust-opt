@@ -1,4 +1,3 @@
-
 extern crate rand;
 
 use benchmark::Func;
@@ -12,28 +11,28 @@ struct Particle {
     vel: Vec<f32>,
     pos: Vec<f32>,
     best: Vec<f32>,
-    dna: Gene,
+    dna: [f32; 6],
     new_best: f32,
     old_best: f32,
     min_integral: f32,
 }
-#[derive(Debug, Clone)]
-struct Gene {
-    current: f32,
-    global: f32,
-    local: f32,
-}
+
+struct Gene;
 impl Gene {
+    //fn crossover( a: Particle, b: Particle ) -> Particle {}
     fn mutate( g: Particle ) -> Particle {
+        let mut mutated_dna: [ f32; 6 ] = [0_f32; 6];
+        for i in 0..mutated_dna.len() {
+            mutated_dna[i] = g.dna[i] + u( 0.0, 4.0 );
+            if !(i % 2 == 0) && mutated_dna[i] <= 0.0 {
+                mutated_dna[i] = 0.00001_f32;
+            }
+        }
         Particle {
             vel: g.vel,
             pos: g.pos,
             best: g.best,
-            dna: Gene {
-                current: g.dna.current + u( -0.5, 0.5 ),
-                global: g.dna.global + u( -0.5, 0.5 ),
-                local: g.dna.local + u( -0.5, 0.5 ),
-            },
+            dna: mutated_dna,
             new_best: g.new_best,
             old_best: g.old_best,
             min_integral: g.min_integral,
@@ -44,7 +43,6 @@ pub struct Swarm<T: Func> {
     particles: Vec<Particle>,
     pub best: Vec<f32>,
     function: T,
-    random: ThreadRng,
 }
 /// Constructs a new `Particle`.
 ///
@@ -63,6 +61,10 @@ impl Particle {
             v.push(v_rand);
             p.push(p_rand);
         }
+        let mut new_dna: [ f32; 6 ] = [ 0_f32; 6 ];
+        for i in 0..new_dna.len() {
+            new_dna[i] = bounded(rnd.gen(), -0.5_f32, 0.5_f32);
+        }
         Particle {
             vel: v,
             pos: p.clone(),
@@ -70,21 +72,32 @@ impl Particle {
             new_best: 0_f32,
             old_best: 0_f32,
             min_integral: 0_f32,
-            dna: Gene {
-                current: bounded( rnd.gen(), 0_f32, 4_f32 ),
-                global:  bounded( rnd.gen(), 0_f32, 4_f32 ),
-                local:   bounded( rnd.gen(), 0_f32, 4_f32 ),
-            }
+            dna: new_dna,
         }
     }
-    fn update_velocity(&mut self, parent_best: &Vec<f32>, parent_rnd: &mut ThreadRng ) {
-        let w = self.dna.current;
-        let g = self.dna.global;
-        let p = self.dna.local;
-        let g_rand: f32 = parent_rnd.gen();
-        let p_rand: f32 = parent_rnd.gen();
+    fn update_velocity(&mut self, parent_best: &Vec<f32> ) {
+        use self::rand::distributions::{Normal, IndependentSample};
+        for i in 0..self.dna.len() {
+            if !(i%2==0) {
+                self.dna[i] = 0.001;
+            }
+        }
+        // let momentum = Normal::new( self.dna[0] as f64, self.dna[1] as f64 );
+        // let local    = Normal::new( self.dna[2] as f64, self.dna[3] as f64 );
+        // let global   = Normal::new( self.dna[4] as f64, self.dna[5] as f64 );
+        let momentum = Normal::new( 1.0, 0.5 );
+        let local    = Normal::new( 1.25, 0.5 );
+        let global   = Normal::new( 1.5, 0.5 );
+        let mut rnd = rand::thread_rng();
         for i in 0..self.vel.len() {
-            self.vel[i] = ( w * self.vel[i] ) + ( p * p_rand * ( self.best[i] - self.pos[i] ) ) + ( ( g * g_rand * ( parent_best[i] - self.pos[i] ) ) );
+            let m: f32 = momentum.ind_sample(&mut rnd) as f32;
+            let l: f32 = local.ind_sample(&mut rnd) as f32;
+            let g: f32 = global.ind_sample(&mut rnd) as f32;
+
+            self.vel[i] =
+            ( m * self.vel[i] ) +
+            ( l * ( self.best[i] - self.pos[i] ) ) +
+            ( g * ( parent_best[i] - self.pos[i] ) );
         }
     }
 }
@@ -117,12 +130,11 @@ impl<T: Func> Swarm<T> {
             best: parts[0].pos.clone(),
             particles: parts,
             function: function,
-            random: rnd,
         }
     }
     pub fn iterate(&mut self) {
         for part in &mut self.particles {
-            part.update_velocity( &self.best, &mut self.random );
+            part.update_velocity( &self.best );
             for i in 0..part.pos.len() {
                 part.pos[i] += part.vel[i];
             }

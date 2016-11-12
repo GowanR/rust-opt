@@ -6,6 +6,6 @@ use self::rand::random;
 pub fn bounded(r: f32, l: f32, u: f32) -> f32 {
     r * (u - l) + l
 }
-pub fn u() -> f32 {
-    bounded( random::<f32>(), -1., 1. )
+pub fn u( l: f32, u: f32 ) -> f32 {
+    bounded( random::<f32>(), l, u )
 }
