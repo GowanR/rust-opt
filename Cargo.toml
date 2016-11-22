@@ -5,7 +5,6 @@ authors = ["Gowan Rowland <gowan.rowland@gmail.com>"]
 
 [dependencies]
 rand = "0.3"
-redis = "0.5.3"
 
 [[bin]]
 doc = false

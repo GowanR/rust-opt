@@ -87,12 +87,12 @@ impl<T: Func + Clone> Population<T> {
         }
     }
     pub fn comp_iterate( &mut self ) {
+        use self::rand::distributions::{IndependentSample, Range};
         self.individuals.sort_by(| a, b | a.fitness().partial_cmp( &b.fitness()).unwrap());
         let best = self.individuals.clone();
         let ( best, _ ) = best.split_at( self.individuals.len()/2 );
         {
             let mut ind = &mut self.individuals;
-            use self::rand::distributions::{IndependentSample, Range};
             let between = Range::new(0, 10);
             let mut rng = rand::thread_rng();
             for i in 0..ind.len() {
